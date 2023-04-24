@@ -1,0 +1,12 @@
+.profile {
+    width: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    padding: 120px;
+    border: 1px solid #080a5f;
+    border-radius: 20px;
+    margin: auto;
+    margin-top: 50px;
+}

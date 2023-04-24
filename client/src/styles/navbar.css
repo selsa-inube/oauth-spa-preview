@@ -1,0 +1,32 @@
+.navbar {
+  background-color: #080a5f;
+  display: flex;
+  flex-direction: row;
+  color: #fff;
+  padding: 40px 80px;
+  width: 100%;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.navbar>ul {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-around;
+  color: #fff;
+  width: 50%;
+}
+
+.navbar>ul>li:hover {
+  transform: scale(1.2);
+}
+
+.link {
+  font-size: 20pt;
+  color: #fff;
+  font-weight: 700;
+  transition: all 0.5s ease-in-out;
+}
+
+.btn {
+  font-weight: 700;
+}
