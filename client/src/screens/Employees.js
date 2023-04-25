@@ -23,22 +23,22 @@ const columns = [
     key: "name",
   },
   {
-    title: "Address",
-    dataIndex: "address",
-    key: "address",
+    title: "Age",
+    dataIndex: "age",
+    key: "age",
   },
 ];
 
 export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [employees, setEmployees] = useState();
-  const { getTokenSilently } = useAuth0();
+  const { getAccessTokenSilently } = useAuth0();
 
   const fetchData = async () => {
     const baseUrl = process.env.REACT_APP_API_URL || "http://localhost:8085";
 
-    const token = await getTokenSilently();
-
+    const token = await getAccessTokenSilently();
+    console.log(token);
     const res = await fetch(`${baseUrl}/employees`, {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -74,7 +74,7 @@ export default function Home() {
 
   return (
     <div className="table-container">
-      <Table className="table" dataSource={employees} columns={columns} />;
+      <Table className="table" dataSource={employees} columns={columns} />
     </div>
   );
 }

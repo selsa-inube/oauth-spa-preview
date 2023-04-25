@@ -5,6 +5,7 @@ import (
 	"oauth-spa-preview/config"
 	"oauth-spa-preview/data"
 
+	"github.com/gofiber/adaptor/v2"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -27,7 +28,7 @@ func Unauthorized(c *fiber.Ctx) error {
 func main() {
 	app := fiber.New()
 
-	port, corsOrigins := config.GetEnvs()
+	port, corsOrigins, _, _ := config.GetEnvs()
 	app.Use(cors.New(cors.Config{
 		AllowOrigins: corsOrigins,
 		AllowMethods: "GET,POST,PUT,DELETE",
@@ -35,7 +36,8 @@ func main() {
 	app.Use(logger.New())
 	app.Use(recover.New())
 
-	app.Get("/employees", config.Authenticated, func(c *fiber.Ctx) error {
+	var EnsureValidToken = adaptor.HTTPMiddleware(config.EnsureValidToken)
+	app.Get("/employees", EnsureValidToken, func(c *fiber.Ctx) error {
 		return c.JSON(data.Employees)
 	})
 

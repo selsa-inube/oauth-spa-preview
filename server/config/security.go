@@ -1,57 +1,64 @@
 package config
 
 import (
-	"encoding/json"
+	"context"
+	"log"
 	"net/http"
+	"net/url"
+	"time"
 
-	"github.com/gofiber/fiber/v2"
-	"github.com/golang-jwt/jwt"
-	"gopkg.in/square/go-jose.v2"
+	jwtmiddleware "github.com/auth0/go-jwt-middleware/v2"
+	"github.com/auth0/go-jwt-middleware/v2/jwks"
+	"github.com/auth0/go-jwt-middleware/v2/validator"
 )
 
-var authConfig = struct {
-	Issuer     string
-	Audience   string
-	Algorithms []string
-}{
-	Issuer:     "http://localhost:3000/",
-	Audience:   "https://dev-hhln36iqhjgzkd4d.us.auth0.com/api/v2/",
-	Algorithms: []string{"RS256"},
+type CustomClaims struct {
+	Scope string `json:"scope"`
 }
 
-func getPublicKey(token *jwt.Token) (interface{}, error) {
-	var keySet jose.JSONWebKeySet
-	resp, err := http.Get(authConfig.Issuer + ".well-known/jwks.json")
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	err = json.NewDecoder(resp.Body).Decode(&keySet)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, key := range keySet.Keys {
-		if key.KeyID == token.Header["kid"] {
-			return key.Public(), nil
-		}
-	}
-
-	return nil, jwt.ErrInvalidKey
+func (c CustomClaims) Validate(ctx context.Context) error {
+	return nil
 }
 
-func Authenticated(c *fiber.Ctx) error {
-	token, err := jwt.Parse(c.Get("Authorization"), func(token *jwt.Token) (interface{}, error) {
-		return getPublicKey(token)
-	})
+func EnsureValidToken(next http.Handler) http.Handler {
+	_, _, auth0Domain, auth0Audience := GetEnvs()
+
+	issuerURL, err := url.Parse("https://" + auth0Domain + "/")
 	if err != nil {
-		return c.Status(fiber.StatusUnauthorized).SendString(err.Error())
+		log.Fatalf("Failed to parse the issuer url: %v", err)
 	}
 
-	if !token.Valid || token.Method.Alg() != authConfig.Algorithms[0] {
-		return c.Status(fiber.StatusUnauthorized).SendString("Unauthorized")
+	provider := jwks.NewCachingProvider(issuerURL, 5*time.Minute)
+
+	jwtValidator, err := validator.New(
+		provider.KeyFunc,
+		validator.RS256,
+		issuerURL.String(),
+		[]string{auth0Audience},
+		validator.WithCustomClaims(
+			func() validator.CustomClaims {
+				return &CustomClaims{}
+			},
+		),
+		validator.WithAllowedClockSkew(time.Minute),
+	)
+	if err != nil {
+		log.Fatalf("Failed to set up the jwt validator")
 	}
 
-	return c.Next()
+	errorHandler := func(w http.ResponseWriter, r *http.Request, err error) {
+		log.Printf("Encountered error while validating JWT: %v", err)
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Write([]byte(`{"message":"Failed to validate JWT."}`))
+	}
+
+	middleware := jwtmiddleware.New(
+		jwtValidator.ValidateToken,
+		jwtmiddleware.WithErrorHandler(errorHandler),
+	)
+
+	return middleware.CheckJWT(next)
+
 }

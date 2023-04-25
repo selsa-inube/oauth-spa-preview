@@ -1,10 +1,9 @@
 package data
 
 type Employee struct {
-	Key      int    `json:"key"`
-	Name     string `json:"name"`
-	Age      int    `json:"age"`
-	Position int    `json:"position"`
+	Key  int    `json:"key"`
+	Name string `json:"name"`
+	Age  int    `json:"age"`
 }
 
 type Site struct {
